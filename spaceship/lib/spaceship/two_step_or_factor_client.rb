@@ -331,6 +331,14 @@ If it is, please open an issue at https://github.com/fastlane/fastlane/issues/ne
         puts("Successfully requested text message to #{phone_number}")
       end
 
+      # if the '--exit_after_sending_2fa' flag is passed then it is time to leave
+      if Spaceship::Globals.exit_after_sending_2fa
+        # save scnt and session id for later usage
+        File.write(self.persistent_resume_path, { "scnt" => @scnt, "x_apple_id_session_id" => @x_apple_id_session_id, "phone_id" => phone_id }.to_json)
+        puts("2FA message sent. Exiting".green)
+        exit 0
+      end
+
       code = ask_for_2fa_code("Please enter the #{code_length} digit code you received at #{phone_number}:")
 
       return { "securityCode" => { "code" => code.to_s }, "phoneNumber" => { "id" => phone_id }, "mode" => push_mode }.to_json

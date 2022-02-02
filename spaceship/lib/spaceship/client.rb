@@ -288,22 +288,34 @@ module Spaceship
       return path
     end
 
-    # Returns preferred path for storing cookie
+    # Returns preferred path for user files
     # for two step verification.
-    def persistent_cookie_path
+    def persistent_user_path
       if ENV["SPACESHIP_COOKIE_PATH"]
-        path = File.expand_path(File.join(ENV["SPACESHIP_COOKIE_PATH"], "spaceship", self.user, "cookie"))
+        path = File.expand_path(File.join(ENV["SPACESHIP_COOKIE_PATH"], "spaceship", self.user))
       else
         [File.join(self.fastlane_user_dir, "spaceship"), "~/.spaceship", "/var/tmp/spaceship", "#{Dir.tmpdir}/spaceship"].each do |dir|
           dir_parts = File.split(dir)
           if directory_accessible?(File.expand_path(dir_parts.first))
-            path = File.expand_path(File.join(dir, self.user, "cookie"))
+            path = File.expand_path(File.join(dir, self.user))
+            FileUtils.mkdir_p(path) unless File.directory?(path)
             break
           end
         end
       end
-
       return path
+    end
+
+    # Returns preferred path for storing cookie
+    # for two step verification.
+    def persistent_cookie_path
+      return File.join(persistent_user_path(), 'cookie')
+    end
+
+    # Returns preferred path for storing the resume info
+    # for two step verification.
+    def persistent_resume_path
+      return File.join(persistent_user_path(), 'resume')
     end
 
     #####################################################
