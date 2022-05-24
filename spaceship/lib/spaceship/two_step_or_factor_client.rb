@@ -17,6 +17,13 @@ module Spaceship
         update_request_headers(req)
       end
 
+      # handle any errors
+      if r.body.kind_of?(Hash) && r.body["serviceErrors"].kind_of?(Array) && r.body["serviceErrors"].first.kind_of?(Hash)
+        puts("Login Error: #{r.body["serviceErrors"].first["message"]}".red)
+        exit 1
+      end
+
+      # treat as two step or two factor
       if r.body.kind_of?(Hash) && r.body["trustedDevices"].kind_of?(Array)
         handle_two_step(r)
       elsif r.body.kind_of?(Hash) && r.body["trustedPhoneNumbers"].kind_of?(Array) && r.body["trustedPhoneNumbers"].first.kind_of?(Hash)
@@ -222,7 +229,10 @@ module Spaceship
         #   "hasError": true
         # }
 
-        if ex.to_s.include?("verification code") # to have a nicer output
+        if ex.to_s.include?("Too many")
+          puts("Error: Too many verification codes sent. Please wait and try again later.".red)
+          return false
+        elsif ex.to_s.include?("verification code") # to have a nicer output
           puts("Error: Incorrect verification code")
           depth += 1
           return handle_two_factor(response, depth)

@@ -851,7 +851,7 @@ module Spaceship
     def do_login(user, password)
       @loggedin = false
       ret = send_login_request(user, password) # different in subclasses
-      @loggedin = true
+      @loggedin = ret
       ret
     end
 
