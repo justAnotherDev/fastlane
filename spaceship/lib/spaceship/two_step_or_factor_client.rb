@@ -1,5 +1,7 @@
 require_relative 'globals'
 require_relative 'tunes/tunes_client'
+require "colored"
+require "json"
 
 module Spaceship
   class Client
@@ -101,6 +103,28 @@ module Spaceship
       return true
     end
 
+    # resumes an authentication session when '--resume_with_2fa' is passed
+    def resume_with_2fa(code, code_type = 'sms')
+      path = self.persistent_resume_path
+      if !File.exist?(path)
+        puts("No existing login attempt found for #{self.user}. Please begin login by using the `--exit_after_sending_2fa` option.".red)
+        return false
+      end
+
+      resume_data = JSON.parse(File.read(path))
+      @x_apple_id_session_id = resume_data["x_apple_id_session_id"]
+      @scnt = resume_data["scnt"]
+      phone_id = resume_data["phone_id"]
+      
+      body = { "securityCode" => { "code" => code.to_s }, "phoneNumber" => { "id" => phone_id }, "mode" => code_type }.to_json
+      device_type = code_type == 'sms' ? 'phone' : 'trusteddevice'
+      if continue_auth_with_2fa(body, device_type)
+        File.delete(path)
+        return true
+      end
+      return false
+    end
+
     def handle_two_factor(response, depth = 0)
       if depth == 0
         puts("Two-factor Authentication (6 digits code) is enabled for account '#{self.user}'")
@@ -171,7 +195,10 @@ module Spaceship
       end
 
       puts("Requesting session...")
+      continue_auth_with_2fa(body, code_type, response, depth)
+    end
 
+    def continue_auth_with_2fa(body, code_type, response = nil, depth = 0)
       # Send "verification code" back to server to get a valid session
       r = request(:post) do |req|
         req.url("https://idmsa.apple.com/appleauth/auth/verify/#{code_type}/securitycode")

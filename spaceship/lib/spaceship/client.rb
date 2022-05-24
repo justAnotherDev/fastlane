@@ -476,6 +476,15 @@ module Spaceship
       # If the session is valid no need to attempt to generate a new one.
       return true if has_valid_session
 
+      # If the login process was suspended, resume it now
+      if Spaceship::Globals.resume_with_2fa
+        if resume_with_2fa(Spaceship::Globals.resume_with_2fa)
+          fetch_olympus_session
+          return true
+        end
+        return false
+      end
+
       data = {
         accountName: user,
         password: password,
